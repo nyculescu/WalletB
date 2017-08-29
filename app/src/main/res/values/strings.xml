@@ -1,0 +1,15 @@
+<resources>
+    <string name="app_name">Wallet B</string>
+    <string name="tab_1">Bill</string>
+    <string name="tab_2">Split</string>
+    <string name="tab_3">Label 3</string>
+    <string name="tab_4">Label 4</string>
+    <string name="tab_5">Label 5</string>
+
+    <string name="menu_1">Bill</string>
+    <string name="menu_2">Split</string>
+    <string name="menu_3">Menu 3</string>
+    <string name="menu_4">Menu 4</string>
+    <string name="menu_5">Menu 5</string>
+
+</resources>

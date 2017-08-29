@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical" android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <TextView
+        android:id="@+id/textView5"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Split the costs"
+        android:textAlignment="center"
+        android:textColor="?attr/editTextColor"
+        android:textSize="20sp" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="15dp"
+        android:visibility="visible"
+        android:background="@android:color/darker_gray"/>
+
+    <TextView
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Who bought?"/>
+
+    <AutoCompleteTextView
+        android:id="@+id/split_WhoBought_ETxt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g.: Catalin" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="15dp"
+        android:visibility="visible"
+        android:background="@android:color/darker_gray"/>
+
+    <TextView
+        android:id="@+id/textView2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="When?" />
+
+    <EditText
+        android:id="@+id/split_When_ETxt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textIsSelectable="true"
+        />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="15dp"
+        android:visibility="visible"
+        android:background="@android:color/darker_gray"/>
+    <TextView
+        android:id="@+id/textView3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="From where?" />
+
+    <AutoCompleteTextView
+        android:id="@+id/split_FromWhere_acTxtV"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="e.g.: Auchan"/>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="15dp"
+        android:visibility="visible"
+        android:background="@android:color/darker_gray"/>
+
+    <TextView
+        android:id="@+id/textView4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="How much?" />
+
+    <EditText
+        android:id="@+id/split_HowMuch_ETxt"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:ems="10"
+        android:inputType="numberDecimal" />
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="15dp"
+        android:visibility="visible"
+        android:background="@android:color/darker_gray"/>
+
+    <Button
+        android:id="@+id/split_OK_btn"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="OK" />
+</LinearLayout>
