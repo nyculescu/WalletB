@@ -60,7 +60,7 @@ public class OCRActivity extends Activity {
             File dir = new File(path);
             if (!dir.exists()) {
                 if (!dir.mkdirs()) {
-                    Toast.makeText(getApplicationContext(), "ERROR: Creation of directory " + path + " on sdcard failed", Toast.LENGTH_LONG).show();
+                    Toast.makeText(getApplicationContext(), "ERROR: Creation of directory " + path + " on sdcard failed. Check the permissions for this app to be enabled.", Toast.LENGTH_LONG).show();
                     Log.v(TAG, "ERROR: Creation of directory " + path + " on sdcard failed");
                     return;
                 } else {
@@ -123,6 +123,7 @@ public class OCRActivity extends Activity {
         final Intent intent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
         intent.putExtra(MediaStore.EXTRA_OUTPUT, outputFileUri);
 
+        Toast.makeText(getApplicationContext(), "debug: " + "before calling startActivityForResult()", Toast.LENGTH_LONG).show();
         startActivityForResult(intent, 0);
     }
 
@@ -130,6 +131,7 @@ public class OCRActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
 
         Log.i(TAG, "resultCode: " + resultCode);
+        Toast.makeText(getApplicationContext(), "debug: " + "resultCode: " + resultCode, Toast.LENGTH_LONG).show();
 
         if (resultCode == -1) {
             onPhotoTaken();
