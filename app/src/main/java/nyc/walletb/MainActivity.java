@@ -12,8 +12,10 @@ import android.support.v4.content.ContextCompat;
 import android.support.v4.view.animation.LinearOutSlowInInterpolator;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.AppCompatDelegate;
+import android.util.Log;
 import android.view.View;
 import android.view.animation.OvershootInterpolator;
+
 import com.aurelhubert.ahbottomnavigation.AHBottomNavigation;
 import com.aurelhubert.ahbottomnavigation.AHBottomNavigationItem;
 import com.aurelhubert.ahbottomnavigation.AHBottomNavigationViewPager;
@@ -66,9 +68,10 @@ import java.util.ArrayList;
 
 /**
  * https://github.com/aurelhubert/ahbottomnavigation
- *
- * */
+ */
 public class MainActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks {
+    final String TAG = getClass().getName();
+
     // Google Spreadsheet
     GoogleAccountCredential mCredential;
     private TextView mOutputText;
@@ -80,7 +83,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
     private static final String BUTTON_TEXT = "Call Google Sheets API";
     private static final String PREF_ACCOUNT_NAME = "accountName";
-    private static final String[] SCOPES = { SheetsScopes.SPREADSHEETS_READONLY };
+    private static final String[] SCOPES = {SheetsScopes.SPREADSHEETS_READONLY};
 
     private MainFragment currentFragment;
     private MainViewPagerAdapter adapter;
@@ -323,13 +326,17 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
      * appropriate.
      */
     private void getResultsFromApi() {
-        if (! isGooglePlayServicesAvailable()) {
+        if (!isGooglePlayServicesAvailable()) {
+            Log.d(TAG, "getResultsFromApi | acquireGooglePlayServices");
             acquireGooglePlayServices();
         } else if (mCredential.getSelectedAccountName() == null) {
             chooseAccount();
-        } else if (! isDeviceOnline()) {
+            Log.d(TAG, "getResultsFromApi | chooseAccount");
+        } else if (!isDeviceOnline()) {
             Toast.makeText(this, "No network connection available.", Toast.LENGTH_LONG).show();
+            Log.e(TAG, "getResultsFromApi | No network connection available.");
         } else {
+            Log.d(TAG, "getResultsFromApi | MakeRequestTask with the chosen credential");
             new MakeRequestTask(mCredential).execute();
         }
     }
@@ -346,26 +353,22 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
      */
     @AfterPermissionGranted(REQUEST_PERMISSION_GET_ACCOUNTS)
     private void chooseAccount() {
-        if (EasyPermissions.hasPermissions(
-                this, Manifest.permission.GET_ACCOUNTS)) {
-            String accountName = getPreferences(Context.MODE_PRIVATE)
-                    .getString(PREF_ACCOUNT_NAME, null);
+        if (EasyPermissions.hasPermissions(this, Manifest.permission.GET_ACCOUNTS)) {
+            String accountName = getPreferences(Context.MODE_PRIVATE).getString(PREF_ACCOUNT_NAME, null);
             if (accountName != null) {
+                Log.d(TAG, "chooseAccount | getResultsFromApi");
                 mCredential.setSelectedAccountName(accountName);
                 getResultsFromApi();
             } else {
+                Log.d(TAG, "chooseAccount | Start a dialog from which the user can choose an account");
                 // Start a dialog from which the user can choose an account
-                startActivityForResult(
-                        mCredential.newChooseAccountIntent(),
-                        REQUEST_ACCOUNT_PICKER);
+                startActivityForResult(mCredential.newChooseAccountIntent(), REQUEST_ACCOUNT_PICKER);
             }
         } else {
             // Request the GET_ACCOUNTS permission via a user dialog
-            EasyPermissions.requestPermissions(
-                    this,
-                    "This app needs to access your Google account (via Contacts).",
-                    REQUEST_PERMISSION_GET_ACCOUNTS,
-                    Manifest.permission.GET_ACCOUNTS);
+            EasyPermissions.requestPermissions(this, "This app needs to access your Google account (via Contacts).",
+                    REQUEST_PERMISSION_GET_ACCOUNTS, Manifest.permission.GET_ACCOUNTS);
+            Log.d(TAG, "chooseAccount | Request the GET_ACCOUNTS permission via a user dialog");
         }
     }
 
@@ -373,36 +376,36 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
      * Called when an activity launched here (specifically, AccountPicker
      * and authorization) exits, giving you the requestCode you started it with,
      * the resultCode it returned, and any additional data from it.
+     *
      * @param requestCode code indicating which activity result is incoming.
-     * @param resultCode code indicating the result of the incoming
-     *     activity result.
-     * @param data Intent (containing result data) returned by incoming
-     *     activity result.
+     * @param resultCode  code indicating the result of the incoming
+     *                    activity result.
+     * @param data        Intent (containing result data) returned by incoming
+     *                    activity result.
      */
     @Override
     protected void onActivityResult(
             int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        switch(requestCode) {
+        switch (requestCode) {
             case REQUEST_GOOGLE_PLAY_SERVICES:
                 if (resultCode != RESULT_OK) {
+                    Log.e(TAG, "onActivityResult | This app requires Google Play Services. Please install Google Play Services on your device and relaunch this app.");
                     Toast.makeText(this, "This app requires Google Play Services. Please install " +
                             "Google Play Services on your device and relaunch this app.", Toast.LENGTH_LONG).show();
                 } else {
+                    Log.d(TAG, "onActivityResult | REQUEST_GOOGLE_PLAY_SERVICES | getResultsFromApi()");
                     getResultsFromApi();
                 }
                 break;
             case REQUEST_ACCOUNT_PICKER:
-                if (resultCode == RESULT_OK && data != null &&
-                        data.getExtras() != null) {
-                    String accountName =
-                            data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+                if (resultCode == RESULT_OK && data != null && data.getExtras() != null) {
+                    String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
                     if (accountName != null) {
-                        SharedPreferences settings =
-                                getPreferences(Context.MODE_PRIVATE);
+                        Log.d(TAG, "onActivityResult" + "REQUEST_ACCOUNT_PICKER | getResultsFromApi()");
+                        SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
                         SharedPreferences.Editor editor = settings.edit();
-                        editor.putString(PREF_ACCOUNT_NAME, accountName);
-                        editor.apply();
+                        editor.putString(PREF_ACCOUNT_NAME, accountName).apply();
                         mCredential.setSelectedAccountName(accountName);
                         getResultsFromApi();
                     }
@@ -410,6 +413,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                 break;
             case REQUEST_AUTHORIZATION:
                 if (resultCode == RESULT_OK) {
+                    Log.d(TAG, "onActivityResult" + "REQUEST_AUTHORIZATION | getResultsFromApi()");
                     getResultsFromApi();
                 }
                 break;
@@ -418,42 +422,42 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
     /**
      * Respond to requests for permissions at runtime for API 23 and above.
-     * @param requestCode The request code passed in
-     *     requestPermissions(android.app.Activity, String, int, String[])
-     * @param permissions The requested permissions. Never null.
+     *
+     * @param requestCode  The request code passed in
+     *                     requestPermissions(android.app.Activity, String, int, String[])
+     * @param permissions  The requested permissions. Never null.
      * @param grantResults The grant results for the corresponding permissions
-     *     which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
+     *                     which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
      */
     @Override
-    public void onRequestPermissionsResult(int requestCode,
-                                           @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        Log.d(TAG, "onRequestPermissionsResult");
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        EasyPermissions.onRequestPermissionsResult(
-                requestCode, permissions, grantResults, this);
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
     }
 
     /**
      * Checks whether the device currently has a network connection.
+     *
      * @return true if the device has a network connection, false otherwise.
      */
     private boolean isDeviceOnline() {
-        ConnectivityManager connMgr =
-                (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        Log.d(TAG, "isDeviceOnline");
+        ConnectivityManager connMgr = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connMgr.getActiveNetworkInfo();
         return (networkInfo != null && networkInfo.isConnected());
     }
 
     /**
      * Check that Google Play services APK is installed and up to date.
+     *
      * @return true if Google Play Services is available and up to
-     *     date on this device; false otherwise.
+     * date on this device; false otherwise.
      */
     private boolean isGooglePlayServicesAvailable() {
-        GoogleApiAvailability apiAvailability =
-                GoogleApiAvailability.getInstance();
-        final int connectionStatusCode =
-                apiAvailability.isGooglePlayServicesAvailable(this);
+        Log.d(TAG, "isGooglePlayServicesAvailable");
+        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
         return connectionStatusCode == ConnectionResult.SUCCESS;
     }
 
@@ -462,11 +466,11 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
      * Play Services installation via a user dialog, if possible.
      */
     private void acquireGooglePlayServices() {
-        GoogleApiAvailability apiAvailability =
-                GoogleApiAvailability.getInstance();
-        final int connectionStatusCode =
-                apiAvailability.isGooglePlayServicesAvailable(this);
+        Log.d(TAG, "acquireGooglePlayServices");
+        GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
+        final int connectionStatusCode = apiAvailability.isGooglePlayServicesAvailable(this);
         if (apiAvailability.isUserResolvableError(connectionStatusCode)) {
+            Log.d(TAG, "acquireGooglePlayServices | showGooglePlayServicesAvailabilityErrorDialog");
             showGooglePlayServicesAvailabilityErrorDialog(connectionStatusCode);
         }
     }
@@ -474,16 +478,14 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     /**
      * Display an error dialog showing that Google Play Services is missing
      * or out of date.
+     *
      * @param connectionStatusCode code describing the presence (or lack of)
-     *     Google Play Services on this device.
+     *                             Google Play Services on this device.
      */
-    void showGooglePlayServicesAvailabilityErrorDialog(
-            final int connectionStatusCode) {
+    void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode) {
+        Log.d(TAG, "showGooglePlayServicesAvailabilityErrorDialog");
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-        Dialog dialog = apiAvailability.getErrorDialog(
-                MainActivity.this,
-                connectionStatusCode,
-                REQUEST_GOOGLE_PLAY_SERVICES);
+        Dialog dialog = apiAvailability.getErrorDialog(MainActivity.this, connectionStatusCode, REQUEST_GOOGLE_PLAY_SERVICES);
         dialog.show();
     }
 
@@ -492,16 +494,16 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
      * Placing the API calls in their own task ensures the UI stays responsive.
      */
     private class MakeRequestTask extends AsyncTask<Void, Void, List<String>> {
+        final String TAG = getClass().getName();
+
         private com.google.api.services.sheets.v4.Sheets mService = null;
         private Exception mLastError = null;
 
         MakeRequestTask(GoogleAccountCredential credential) {
+            Log.d(TAG, "MakeRequestTask");
             HttpTransport transport = AndroidHttp.newCompatibleTransport();
             JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
-            mService = new com.google.api.services.sheets.v4.Sheets.Builder(
-                    transport, jsonFactory, credential)
-                    .setApplicationName("Google Sheets API Android Quickstart")
-                    .build();
+            mService = new com.google.api.services.sheets.v4.Sheets.Builder(transport, jsonFactory, credential).setApplicationName("Google Sheets API Android Quickstart").build();
         }
 
         /**
@@ -512,8 +514,10 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         @Override
         protected List<String> doInBackground(Void... params) {
             try {
+                Log.d(TAG, "doInBackground | getDataFromApi()");
                 return getDataFromApi();
             } catch (Exception e) {
+                Log.e(TAG, "doInBackground | " + e);
                 mLastError = e;
                 cancel(true);
                 return null;
@@ -521,14 +525,20 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         }
 
         /**
-         * Fetch a list of names and majors of students in a sample spreadsheet:
-         * https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+         * SAMPLE ********************** https://developers.google.com/sheets/api/quickstart/android
+         * Fetch a list of names and majors of students in a sample spreadsheet (tested from an internal sheet):
+         *
+         * from google samples: https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
+         *
+         * (configs: Anyone who has the link can view) todo: the config should be done from the app
+         * https://docs.google.com/spreadsheets/d/1jwMOrr9fcjIkw3DM-yTBhw8UbvICE6P9UQ_bFI7KWpQ/edit#gid=0
          *
          * @return List of names and majors
          * @throws IOException
          */
         private List<String> getDataFromApi() throws IOException {
-            String spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms";
+            String spreadsheetId = "1jwMOrr9fcjIkw3DM-yTBhw8UbvICE6P9UQ_bFI7KWpQ"; // todo Error: com.google.api.client.googleapis.json.GoogleJsonResponseException: 400 Bad Request
+            //String spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"; // Google sample: this ID is good
             String range = "Class Data!A2:E";
             List<String> results = new ArrayList<>();
             ValueRange response = this.mService.spreadsheets().values()
@@ -536,15 +546,19 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                     .execute();
             List<List<Object>> values = response.getValues();
             if (values != null) {
+                Log.d(TAG, "getDataFromApi | get values from the spreadsheet");
                 results.add("Name, Major");
                 for (List row : values) {
                     /*
-                    * Student Name	Gender	Class Level	Home State	Major	Extracurricular Activity
-                      Alexandra	    Female	4. Senior	CA	        English	Drama Club
-                    *
+                    Name	    Gender	Class Level	Home State	Major	    Extracurricular Activity
+                    Gogosel	    Male	3. Middle	RO	        Automotive	Android
+                    Gogosica	Female	2. Junior	RO	        Automotive	Food
                     * */
                     results.add(row.get(0) + ", " + row.get(4));
                 }
+            }
+            else{
+                Log.d(TAG, "getDataFromApi | error on getting values from the spreadsheet");
             }
             return results;
         }
@@ -552,6 +566,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
         @Override
         protected void onPreExecute() {
+            Log.d(TAG, "onPreExecute");
             mProgress.show();
         }
 
@@ -559,9 +574,11 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         protected void onPostExecute(List<String> output) {
             mProgress.hide();
             if (output == null || output.size() == 0) {
+                Log.e(TAG, "onPostExecute | No results returned.");
                 Toast.makeText(getBaseContext(), "No results returned.", Toast.LENGTH_LONG).show();
             } else {
                 output.add(0, "Data retrieved using the Google Sheets API:");
+                Log.d(TAG, "onPostExecute | Data retrieved using the Google Sheets API:" + output);
                 Toast.makeText(getBaseContext(), TextUtils.join("\n", output), Toast.LENGTH_LONG).show();
             }
         }
@@ -571,17 +588,17 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             mProgress.hide();
             if (mLastError != null) {
                 if (mLastError instanceof GooglePlayServicesAvailabilityIOException) {
-                    showGooglePlayServicesAvailabilityErrorDialog(
-                            ((GooglePlayServicesAvailabilityIOException) mLastError)
-                                    .getConnectionStatusCode());
+                    Log.d(TAG, "onCancelled | showGooglePlayServicesAvailabilityErrorDialog()");
+                    showGooglePlayServicesAvailabilityErrorDialog(((GooglePlayServicesAvailabilityIOException) mLastError).getConnectionStatusCode());
                 } else if (mLastError instanceof UserRecoverableAuthIOException) {
-                    startActivityForResult(
-                            ((UserRecoverableAuthIOException) mLastError).getIntent(),
-                            MainActivity.REQUEST_AUTHORIZATION);
+                    Log.d(TAG, "onCancelled | startActivityForResult()");
+                    startActivityForResult(((UserRecoverableAuthIOException) mLastError).getIntent(), MainActivity.REQUEST_AUTHORIZATION);
                 } else {
-                    Toast.makeText(getBaseContext(), "The following error occurred:\n"+ mLastError.getMessage(), Toast.LENGTH_LONG).show();
+                    Log.e(TAG, "onCancelled | The following error occurred:\n" + mLastError.getMessage());
+                    Toast.makeText(getBaseContext(), "The following error occurred:\n" + mLastError.getMessage(), Toast.LENGTH_LONG).show();
                 }
             } else {
+                Log.e(TAG, "onCancelled | Request cancelled.");
                 Toast.makeText(getBaseContext(), "Request cancelled.", Toast.LENGTH_LONG).show();
             }
         }
