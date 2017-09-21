@@ -1,0 +1,10 @@
+{
+    "installed": {
+        "client_id": "507177534640-plqe0r7en51317i5rltcvqrge7dk84g7.apps.googleusercontent.com",
+        "project_id": "hip-transducer-180617",
+        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+        "token_uri": "https://accounts.google.com/o/oauth2/token",
+        "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+        "redirect_uris": ["urn:ietf:wg:oauth:2.0:oob", "http://localhost"]
+    }
+}
