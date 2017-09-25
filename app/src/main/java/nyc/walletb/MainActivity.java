@@ -36,24 +36,15 @@ import com.google.api.services.sheets.v4.model.*;
 
 import android.Manifest;
 import android.accounts.AccountManager;
-import android.app.Activity;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
-import android.content.Intent;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.os.AsyncTask;
-import android.os.Bundle;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
-import android.text.method.ScrollingMovementMethod;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.Button;
-import android.widget.LinearLayout;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.IOException;
@@ -64,26 +55,24 @@ import java.util.List;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 
-import java.util.ArrayList;
-
 /**
- * https://github.com/aurelhubert/ahbottomnavigation
+ * The UI was inherited from https://github.com/aurelhubert/ahbottomnavigation
  */
 public class MainActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks {
     final String TAG = getClass().getName();
 
     // Google Spreadsheet
-    GoogleAccountCredential mCredential;
-    private TextView mOutputText;
-    private Button mCallApiButton;
-    ProgressDialog mProgress;
-    static final int REQUEST_ACCOUNT_PICKER = 1000;
-    static final int REQUEST_AUTHORIZATION = 1001;
-    static final int REQUEST_GOOGLE_PLAY_SERVICES = 1002;
-    static final int REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
-    private static final String BUTTON_TEXT = "Call Google Sheets API";
-    private static final String PREF_ACCOUNT_NAME = "accountName";
-    private static final String[] SCOPES = {SheetsScopes.SPREADSHEETS_READONLY};
+    GoogleAccountCredential spreadsheet_credential;
+    ProgressDialog spreadsheet_progressBar;
+    static final int spreadsheet_REQUEST_ACCOUNT_PICKER = 1000;
+    static final int spreadsheet_REQUEST_AUTHORIZATION = 1001;
+    static final int spreadsheet_REQUEST_GOOGLE_PLAY_SERVICES = 1002;
+    static final int spreadsheet_REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
+    static final String spreadsheet_PREF_ACCOUNT_NAME = "accountName";
+    // com.google.api.client.googleapis.json.GoogleJsonResponseException: 403 Forbidden  is caused by  SheetsScopes.SPREADSHEETS_READONLY
+    private static final String[] spreadsheet_SCOPES = {SheetsScopes.SPREADSHEETS};
+    private static final String spreadsheet_ID = "1jwMOrr9fcjIkw3DM-yTBhw8UbvICE6P9UQ_bFI7KWpQ";
+    private static final String spreadsheet_sheetID = "Sheet1";
 
     private MainFragment currentFragment;
     private MainViewPagerAdapter adapter;
@@ -275,11 +264,11 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
         //bottomNavigation.setDefaultBackgroundResource(R.drawable.bottom_navigation_background);
 
-        mProgress = new ProgressDialog(this);
-        mProgress.setMessage("Calling Google Sheets API ...");
+        spreadsheet_progressBar = new ProgressDialog(this);
+        spreadsheet_progressBar.setMessage("Calling Google Sheets API ...");
         // Initialize credentials and service object.
-        mCredential = GoogleAccountCredential.usingOAuth2(
-                getApplicationContext(), Arrays.asList(SCOPES))
+        spreadsheet_credential = GoogleAccountCredential.usingOAuth2(
+                getApplicationContext(), Arrays.asList(spreadsheet_SCOPES))
                 .setBackOff(new ExponentialBackOff());
         getResultsFromApi();
     }
@@ -310,12 +299,10 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     /********************** implementation for EasyPermissions.PermissionCallbacks **********************/
     @Override
     public void onPermissionsGranted(int requestCode, List<String> perms) {
-
     }
 
     @Override
     public void onPermissionsDenied(int requestCode, List<String> perms) {
-
     }
 
     /**
@@ -329,7 +316,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         if (!isGooglePlayServicesAvailable()) {
             Log.d(TAG, "getResultsFromApi | acquireGooglePlayServices");
             acquireGooglePlayServices();
-        } else if (mCredential.getSelectedAccountName() == null) {
+        } else if (spreadsheet_credential.getSelectedAccountName() == null) {
             chooseAccount();
             Log.d(TAG, "getResultsFromApi | chooseAccount");
         } else if (!isDeviceOnline()) {
@@ -337,7 +324,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             Log.e(TAG, "getResultsFromApi | No network connection available.");
         } else {
             Log.d(TAG, "getResultsFromApi | MakeRequestTask with the chosen credential");
-            new MakeRequestTask(mCredential).execute();
+            new MakeRequestTask(spreadsheet_credential).execute();
         }
     }
 
@@ -351,23 +338,23 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
      * function will be rerun automatically whenever the GET_ACCOUNTS permission
      * is granted.
      */
-    @AfterPermissionGranted(REQUEST_PERMISSION_GET_ACCOUNTS)
+    @AfterPermissionGranted(spreadsheet_REQUEST_PERMISSION_GET_ACCOUNTS)
     private void chooseAccount() {
         if (EasyPermissions.hasPermissions(this, Manifest.permission.GET_ACCOUNTS)) {
-            String accountName = getPreferences(Context.MODE_PRIVATE).getString(PREF_ACCOUNT_NAME, null);
+            String accountName = getPreferences(Context.MODE_PRIVATE).getString(spreadsheet_PREF_ACCOUNT_NAME, null);
             if (accountName != null) {
                 Log.d(TAG, "chooseAccount | getResultsFromApi");
-                mCredential.setSelectedAccountName(accountName);
+                spreadsheet_credential.setSelectedAccountName(accountName);
                 getResultsFromApi();
             } else {
                 Log.d(TAG, "chooseAccount | Start a dialog from which the user can choose an account");
                 // Start a dialog from which the user can choose an account
-                startActivityForResult(mCredential.newChooseAccountIntent(), REQUEST_ACCOUNT_PICKER);
+                startActivityForResult(spreadsheet_credential.newChooseAccountIntent(), spreadsheet_REQUEST_ACCOUNT_PICKER);
             }
         } else {
             // Request the GET_ACCOUNTS permission via a user dialog
             EasyPermissions.requestPermissions(this, "This app needs to access your Google account (via Contacts).",
-                    REQUEST_PERMISSION_GET_ACCOUNTS, Manifest.permission.GET_ACCOUNTS);
+                    spreadsheet_REQUEST_PERMISSION_GET_ACCOUNTS, Manifest.permission.GET_ACCOUNTS);
             Log.d(TAG, "chooseAccount | Request the GET_ACCOUNTS permission via a user dialog");
         }
     }
@@ -388,32 +375,32 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
             int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         switch (requestCode) {
-            case REQUEST_GOOGLE_PLAY_SERVICES:
+            case spreadsheet_REQUEST_GOOGLE_PLAY_SERVICES:
                 if (resultCode != RESULT_OK) {
                     Log.e(TAG, "onActivityResult | This app requires Google Play Services. Please install Google Play Services on your device and relaunch this app.");
                     Toast.makeText(this, "This app requires Google Play Services. Please install " +
                             "Google Play Services on your device and relaunch this app.", Toast.LENGTH_LONG).show();
                 } else {
-                    Log.d(TAG, "onActivityResult | REQUEST_GOOGLE_PLAY_SERVICES | getResultsFromApi()");
+                    Log.d(TAG, "onActivityResult | spreadsheet_REQUEST_GOOGLE_PLAY_SERVICES | getResultsFromApi()");
                     getResultsFromApi();
                 }
                 break;
-            case REQUEST_ACCOUNT_PICKER:
+            case spreadsheet_REQUEST_ACCOUNT_PICKER:
                 if (resultCode == RESULT_OK && data != null && data.getExtras() != null) {
                     String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
                     if (accountName != null) {
-                        Log.d(TAG, "onActivityResult" + "REQUEST_ACCOUNT_PICKER | getResultsFromApi()");
+                        Log.d(TAG, "onActivityResult" + "spreadsheet_REQUEST_ACCOUNT_PICKER | getResultsFromApi()");
                         SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
                         SharedPreferences.Editor editor = settings.edit();
-                        editor.putString(PREF_ACCOUNT_NAME, accountName).apply();
-                        mCredential.setSelectedAccountName(accountName);
+                        editor.putString(spreadsheet_PREF_ACCOUNT_NAME, accountName).apply();
+                        spreadsheet_credential.setSelectedAccountName(accountName);
                         getResultsFromApi();
                     }
                 }
                 break;
-            case REQUEST_AUTHORIZATION:
+            case spreadsheet_REQUEST_AUTHORIZATION:
                 if (resultCode == RESULT_OK) {
-                    Log.d(TAG, "onActivityResult" + "REQUEST_AUTHORIZATION | getResultsFromApi()");
+                    Log.d(TAG, "onActivityResult" + "spreadsheet_REQUEST_AUTHORIZATION | getResultsFromApi()");
                     getResultsFromApi();
                 }
                 break;
@@ -485,7 +472,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     void showGooglePlayServicesAvailabilityErrorDialog(final int connectionStatusCode) {
         Log.d(TAG, "showGooglePlayServicesAvailabilityErrorDialog");
         GoogleApiAvailability apiAvailability = GoogleApiAvailability.getInstance();
-        Dialog dialog = apiAvailability.getErrorDialog(MainActivity.this, connectionStatusCode, REQUEST_GOOGLE_PLAY_SERVICES);
+        Dialog dialog = apiAvailability.getErrorDialog(MainActivity.this, connectionStatusCode, spreadsheet_REQUEST_GOOGLE_PLAY_SERVICES);
         dialog.show();
     }
 
@@ -514,8 +501,8 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         @Override
         protected List<String> doInBackground(Void... params) {
             try {
-                Log.d(TAG, "doInBackground | getDataFromApi()");
-                return getDataFromApi();
+                Log.d(TAG, "doInBackground | getDataFromGoogleSheets()");
+                return getDataFromGoogleSheets();
             } catch (Exception e) {
                 Log.e(TAG, "doInBackground | " + e);
                 mLastError = e;
@@ -527,25 +514,24 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         /**
          * SAMPLE ********************** https://developers.google.com/sheets/api/quickstart/android
          * Fetch a list of names and majors of students in a sample spreadsheet (tested from an internal sheet):
-         *
+         * <p>
          * from google samples: https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit
-         *
+         * <p>
          * (configs: Anyone who has the link can view) todo: the config should be done from the app
          * https://docs.google.com/spreadsheets/d/1jwMOrr9fcjIkw3DM-yTBhw8UbvICE6P9UQ_bFI7KWpQ/edit#gid=0
          *
          * @return List of names and majors
          * @throws IOException
          */
-        private List<String> getDataFromApi() throws IOException {
-            String spreadsheetId = "1jwMOrr9fcjIkw3DM-yTBhw8UbvICE6P9UQ_bFI7KWpQ";
-            String range = "Sheet1!A2:E"; // <name of the sheet>!<from cell>:<to cell>
+        private List<String> getDataFromGoogleSheets() throws IOException {
+            String range = spreadsheet_sheetID + "!A2:E"; // <name of the sheet>!<from cell>:<to cell>
             List<String> results = new ArrayList<>();
             ValueRange response = this.mService.spreadsheets().values()
-                    .get(spreadsheetId, range)
+                    .get(spreadsheet_ID, range)
                     .execute();
             List<List<Object>> values = response.getValues();
             if (values != null) {
-                Log.d(TAG, "getDataFromApi | get values from the spreadsheet");
+                Log.d(TAG, "getDataFromGoogleSheets | get values from the spreadsheet");
                 results.add("Name, Major");
                 for (List row : values) {
                     /*
@@ -555,43 +541,87 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                     * */
                     results.add(row.get(0) + ", " + row.get(4));
                 }
-            }
-            else{
-                Log.d(TAG, "getDataFromApi | error on getting values from the spreadsheet");
+            } else {
+                Log.d(TAG, "getDataFromGoogleSheets | error on getting values from the spreadsheet");
             }
             return results;
         }
 
+        /**
+         * Append data after a table of data in a sheet. Reference  https://developers.google.com/sheets/api/guides/values
+         */
+        private void appendDataToGoogleSheets(List<List<String>> cellValues) {
+            //TODO: for now, this method of casting List<List<String>> to List<List<Object>> is done. To be redefined
+            List<List<Object>> listToBeWritten = new ArrayList<>();
+            if (cellValues != null)
+                for (int i = 0; i < cellValues.size(); i++) {
+                    if (cellValues.get(i) != null)
+                        listToBeWritten.add(new ArrayList<Object>(cellValues.get(i)));
+                }
+
+            final ValueRange body = new ValueRange().setValues(listToBeWritten);
+            final String range = spreadsheet_sheetID + "!A3:E";
+            final com.google.api.services.sheets.v4.Sheets service = this.mService;
+
+            AsyncTask<Void, Void, AppendValuesResponse> appendDataToGoogleSheets_task = new AsyncTask<Void, Void, AppendValuesResponse>() {
+                @Override
+                protected AppendValuesResponse doInBackground(Void... params) {
+                    AppendValuesResponse result = null;
+                    try {
+                        result = service.spreadsheets().values().append(spreadsheet_ID, range, body)
+                                //Google Sheets API v4 and valueInputOption  https://stackoverflow.com/questions/37785216/google-sheets-api-v4-and-valueinputoption
+                                .setValueInputOption("USER_ENTERED") //https://developers.google.com/sheets/api/reference/rest/v4/ValueInputOption
+                                .execute();
+                    } catch (IOException exception) {
+                        Log.e(TAG, "appendDataToGoogleSheets | " + exception.toString());
+                    }
+                    return result;
+                }
+
+                @Override
+                protected void onPostExecute(AppendValuesResponse resultFromTheAppendingTask) {
+                    Log.d(TAG, "appendDataToGoogleSheets | " + resultFromTheAppendingTask);
+                }
+            };
+            appendDataToGoogleSheets_task.execute();
+        }
 
         @Override
         protected void onPreExecute() {
             Log.d(TAG, "onPreExecute");
-            mProgress.show();
+            spreadsheet_progressBar.show();
         }
 
         @Override
         protected void onPostExecute(List<String> output) {
-            mProgress.hide();
+            spreadsheet_progressBar.hide();
             if (output == null || output.size() == 0) {
                 Log.e(TAG, "onPostExecute | No results returned.");
                 Toast.makeText(getBaseContext(), "No results returned.", Toast.LENGTH_LONG).show();
             } else {
-                output.add(0, "Data retrieved using the Google Sheets API:");
+                //output.add(0, "Data retrieved using the Google Sheets API:");
                 Log.d(TAG, "onPostExecute | Data retrieved using the Google Sheets API:" + output);
                 Toast.makeText(getBaseContext(), TextUtils.join("\n", output), Toast.LENGTH_LONG).show();
+
+                //TODO: 9/25/2017  Used for debug. Delete it after successful writing into the document
+                // append just for row 0 and row 4
+                appendDataToGoogleSheets(Arrays.asList(
+                        Arrays.asList("Catalin", "", "", "", "System Engineer"),
+                        Arrays.asList("Alisa", "", "", "", "Programmer")
+                ));
             }
         }
 
         @Override
         protected void onCancelled() {
-            mProgress.hide();
+            spreadsheet_progressBar.hide();
             if (mLastError != null) {
                 if (mLastError instanceof GooglePlayServicesAvailabilityIOException) {
                     Log.d(TAG, "onCancelled | showGooglePlayServicesAvailabilityErrorDialog()");
                     showGooglePlayServicesAvailabilityErrorDialog(((GooglePlayServicesAvailabilityIOException) mLastError).getConnectionStatusCode());
                 } else if (mLastError instanceof UserRecoverableAuthIOException) {
                     Log.d(TAG, "onCancelled | startActivityForResult()");
-                    startActivityForResult(((UserRecoverableAuthIOException) mLastError).getIntent(), MainActivity.REQUEST_AUTHORIZATION);
+                    startActivityForResult(((UserRecoverableAuthIOException) mLastError).getIntent(), MainActivity.spreadsheet_REQUEST_AUTHORIZATION);
                 } else {
                     Log.e(TAG, "onCancelled | The following error occurred:\n" + mLastError.getMessage());
                     Toast.makeText(getBaseContext(), "The following error occurred:\n" + mLastError.getMessage(), Toast.LENGTH_LONG).show();
