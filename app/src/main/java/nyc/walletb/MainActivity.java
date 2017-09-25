@@ -537,8 +537,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
          * @throws IOException
          */
         private List<String> getDataFromApi() throws IOException {
-            String spreadsheetId = "1jwMOrr9fcjIkw3DM-yTBhw8UbvICE6P9UQ_bFI7KWpQ"; // todo Error: com.google.api.client.googleapis.json.GoogleJsonResponseException: 400 Bad Request
-            //String spreadsheetId = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"; // Google sample: this ID is good
+            String spreadsheetId = "1jwMOrr9fcjIkw3DM-yTBhw8UbvICE6P9UQ_bFI7KWpQ";
             String range = "Sheet1!A2:E"; // <name of the sheet>!<from cell>:<to cell>
             List<String> results = new ArrayList<>();
             ValueRange response = this.mService.spreadsheets().values()
