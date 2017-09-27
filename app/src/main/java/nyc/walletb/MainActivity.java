@@ -21,6 +21,7 @@ import com.aurelhubert.ahbottomnavigation.AHBottomNavigationItem;
 import com.aurelhubert.ahbottomnavigation.AHBottomNavigationViewPager;
 import com.aurelhubert.ahbottomnavigation.notification.AHNotification;
 
+import com.facebook.stetho.Stetho;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
 import com.google.api.client.extensions.android.http.AndroidHttp;
@@ -90,6 +91,8 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        Stetho.initializeWithDefaults(this);
 
         setTheme(R.style.AppTheme);
         setContentView(R.layout.activity_home);
@@ -270,7 +273,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         spreadsheet_credential = GoogleAccountCredential.usingOAuth2(
                 getApplicationContext(), Arrays.asList(spreadsheet_SCOPES))
                 .setBackOff(new ExponentialBackOff());
-        getResultsFromApi();
+        //getResultsFromApi();
     }
 
     /**

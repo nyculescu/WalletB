@@ -2,13 +2,18 @@ package nyc.walletb;
 
 import android.app.DialogFragment;
 import android.content.Context;
+import android.content.SharedPreferences;
+import android.nfc.Tag;
 import android.os.Build;
 import android.os.Bundle;
+import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.SwitchCompat;
+import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
@@ -26,16 +31,28 @@ import android.widget.FrameLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.reflect.TypeToken;
+
+import org.json.JSONArray;
+
+import java.lang.reflect.Array;
+import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.Locale;
 
 /**
  *
  */
 public class MainFragment extends Fragment {
+    final String TAG = getClass().getName();
 
     private FrameLayout fragmentContainer;
     private RecyclerView recyclerView;
@@ -83,6 +100,9 @@ public class MainFragment extends Fragment {
         }
     }
 
+    /**
+     * Initialization of the SPLIT Fragment
+     */
     private void initSplitPage(final View view) {
         // Who bought? --section
         split_who_array = new ArrayList<>();
@@ -148,7 +168,7 @@ public class MainFragment extends Fragment {
         split_currency_spinner.setAdapter(currency_spinner_adapter); // this will set list of currencies to the split_currency_spinner
         split_currency_spinner.setSelection(split_currency_array.indexOf(0)); //set "Lei" as default
         /* //TODO: 9/21/2017 to be set the currency of the user's country
-		Locale locale;
+        Locale locale;
 		if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
 			locale = view.getContext().getResources().getConfiguration().getLocales().get(0);
 		} else {
@@ -161,19 +181,58 @@ public class MainFragment extends Fragment {
         ok_button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                String who_bought = split_who_et.getText().toString();
+                /*--------------------- Collect data from user inputs ---------------------*/
+                SplitActivity_Template collected_data = new SplitActivity_Template();
 
-                String date_pattern = "dd.mm.yyyy";
+                collected_data.setWho_bought(split_who_et.getText().toString());
+
                 try {
-                    Date when = new SimpleDateFormat(date_pattern).parse(split_calendar_et.getText().toString());
+                    SimpleDateFormat date_format = new SimpleDateFormat("dd.mm.yyyy", Locale.ENGLISH);
+                    collected_data.setWhen_was_it_bought(date_format.parse(split_calendar_et.getText().toString()));
                 } catch (ParseException e) {
+                    collected_data.setWhen_was_it_bought(new Date());
                     e.printStackTrace();
                 }
 
-                String from_where = split_fromwho_actv.getText().toString();
+                collected_data.setFrom_where_was_it_bought(split_fromwho_actv.getText().toString());
 
-                float how_much = Float.valueOf(split_howmuch_et.getText().toString());
+                try {
+                    collected_data.setHow_much_did_it_cost(Float.valueOf(split_howmuch_et.getText().toString()));
+                } catch (NumberFormatException e) {
+                    Log.e(TAG, e.getMessage());
+                }
 
+                /*------------------------- Save this data locally -------------------------*/
+                /* The data which is not synchronized will be saved temporary in sharedpreferences
+                 *
+                 * For debug (NON-ROOTED phones) I used  http://facebook.github.io/stetho/
+                 * 1) in build.gradle add compile 'com.facebook.stetho:stetho:1.5.0'
+                 * 2) in the onCreate() add Stetho.initializeWithDefaults(this);
+                 * 3) in Chrome, from PC, go to the chrome://inspect/
+                 * 4) in Chrome go to Remote Target > nyc.walletb > inspect >> Local Storage > nyc.walletb_preferences
+                 */
+                // Write into SharedPreferences
+                SharedPreferences sharedPrefs_W = PreferenceManager.getDefaultSharedPreferences(getContext());
+                SharedPreferences.Editor editor_W = sharedPrefs_W.edit();
+                Gson gson_W = new Gson();
+                String json_W = gson_W.toJson(collected_data.allParamsToString());
+                editor_W.putString(TAG, json_W);
+                editor_W.apply();
+
+                // Read from SharedPreferences TODO shall be moved from here!
+                /*
+                SharedPreferences sharedPrefs_R = PreferenceManager.getDefaultSharedPreferences(getContext());
+                Gson gson_R = new Gson();
+                String json_R = sharedPrefs_R.getString(TAG, null);
+                Type type = new TypeToken<ArrayList<String>>() {}.getType();
+                ArrayList<String> dataFromSharePref = gson_R.fromJson(json_R, type);
+                */
+
+                /*----- If internet is available, send the data to Google Spreadsheet -----*/
+                // TODO: 9/25/2017 implement this feature
+                /* Data will be stored in a Google Spread Sheet. Using databases in this app will require servers, which cost a lot of money :)
+                 * TODO implementation of a database instead Google Spread Sheet
+                 * */
 
             }
         });
