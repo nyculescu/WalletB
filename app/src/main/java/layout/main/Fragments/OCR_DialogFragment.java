@@ -1,4 +1,4 @@
-package nyc.walletb;
+package layout.main.Fragments;
 
 import android.app.DialogFragment;
 import android.content.Intent;
@@ -8,7 +8,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Matrix;
 import android.media.ExifInterface;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -27,6 +26,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+
+import layout.main.Activities.OCRActivity;
+import nyc.walletb.R;
 
 public class OCR_DialogFragment extends DialogFragment {
     int mNum = 1;
@@ -72,28 +74,53 @@ public class OCR_DialogFragment extends DialogFragment {
 
         // Pick a style based on the num.
         int style = DialogFragment.STYLE_NORMAL, theme = 0;
-        switch ((mNum-1)%6) {
-            case 1: style = DialogFragment.STYLE_NO_TITLE; break;
-            case 2: style = DialogFragment.STYLE_NO_FRAME; break;
-            case 3: style = DialogFragment.STYLE_NO_INPUT; break;
-            case 4: style = DialogFragment.STYLE_NORMAL; break;
-            case 5: style = DialogFragment.STYLE_NORMAL; break;
-            case 6: style = DialogFragment.STYLE_NO_TITLE; break;
-            case 7: style = DialogFragment.STYLE_NO_FRAME; break;
-            case 8: style = DialogFragment.STYLE_NORMAL; break;
+        switch ((mNum - 1) % 6) {
+            case 1:
+                style = DialogFragment.STYLE_NO_TITLE;
+                break;
+            case 2:
+                style = DialogFragment.STYLE_NO_FRAME;
+                break;
+            case 3:
+                style = DialogFragment.STYLE_NO_INPUT;
+                break;
+            case 4:
+                style = DialogFragment.STYLE_NORMAL;
+                break;
+            case 5:
+                style = DialogFragment.STYLE_NORMAL;
+                break;
+            case 6:
+                style = DialogFragment.STYLE_NO_TITLE;
+                break;
+            case 7:
+                style = DialogFragment.STYLE_NO_FRAME;
+                break;
+            case 8:
+                style = DialogFragment.STYLE_NORMAL;
+                break;
         }
-        switch ((mNum-1)%6) {
-            case 4: theme = android.R.style.Theme_Holo; break;
-            case 5: theme = android.R.style.Theme_Holo_Light_Dialog; break;
-            case 6: theme = android.R.style.Theme_Holo_Light; break;
-            case 7: theme = android.R.style.Theme_Holo_Light_Panel; break;
-            case 8: theme = android.R.style.Theme_Holo_Light; break;
+        switch ((mNum - 1) % 6) {
+            case 4:
+                theme = android.R.style.Theme_Holo;
+                break;
+            case 5:
+                theme = android.R.style.Theme_Holo_Light_Dialog;
+                break;
+            case 6:
+                theme = android.R.style.Theme_Holo_Light;
+                break;
+            case 7:
+                theme = android.R.style.Theme_Holo_Light_Panel;
+                break;
+            case 8:
+                theme = android.R.style.Theme_Holo_Light;
+                break;
         }
         setStyle(style, theme);
 
 
-
-        String[] paths = new String[] { DATA_PATH, DATA_PATH + "tessdata/" };
+        String[] paths = new String[]{DATA_PATH, DATA_PATH + "tessdata/"};
 
         for (String path : paths) {
             File dir = new File(path);
@@ -273,13 +300,13 @@ public class OCR_DialogFragment extends DialogFragment {
 
         Log.v(TAG, "OCRED TEXT: " + recognizedText);
 
-        if ( lang.equalsIgnoreCase("eng") ) {
+        if (lang.equalsIgnoreCase("eng")) {
             recognizedText = recognizedText.replaceAll("[^a-zA-Z0-9]+", " ");
         }
 
         recognizedText = recognizedText.trim();
 
-        if ( recognizedText.length() != 0 ) {
+        if (recognizedText.length() != 0) {
             //_field.setText(_field.getText().toString().length() == 0 ? recognizedText : _field.getText() + " " + recognizedText);
             //_field.setSelection(_field.getText().toString().length());
         }

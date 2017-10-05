@@ -1,46 +1,27 @@
-package nyc.walletb;
+package layout.main.Fragments;
 
 import android.app.DialogFragment;
-import android.content.Context;
 import android.content.SharedPreferences;
-import android.nfc.Tag;
-import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.SwitchCompat;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.animation.Animation;
-import android.view.animation.AnimationUtils;
 import android.view.inputmethod.EditorInfo;
 import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.FrameLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.reflect.TypeToken;
 
-import org.json.JSONArray;
-
-import java.lang.reflect.Array;
-import java.lang.reflect.Type;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -48,16 +29,14 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.Locale;
 
+import layout.main.Dialogs.DatePickerDialogFragment;
+import nyc.walletb.R;
+import nyc.walletb.SplitActivity_Template;
+
 /**
  *
  */
-public class MainFragment extends Fragment {
-    final String TAG = getClass().getName();
-
-    private FrameLayout fragmentContainer;
-    private RecyclerView recyclerView;
-    private RecyclerView.LayoutManager layoutManager;
-
+public class SplitFragment extends FragmentComplement {
     // UI - Split fragment
     String[] split_autocomplete_fromwhere = {"Auchan", "Carrefour", "Profi", "Lidl", "Auchan Sud", "Auchan Nord", "Auchan Iulius Mall"};
     AutoCompleteTextView split_who_et;
@@ -71,44 +50,32 @@ public class MainFragment extends Fragment {
     /**
      * Create a new instance of the fragment
      */
-    public static MainFragment newInstance(int index) {
-        MainFragment fragment = new MainFragment();
-        Bundle b = new Bundle();
-        b.putInt("index", index);
-        fragment.setArguments(b);
-        return fragment;
+    public static Fragment newInstance() {
+        return new SplitFragment();
     }
 
     @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        View view;
-        switch (getArguments().getInt("index", 0)) {
-            case 0:
-                view = inflater.inflate(R.layout.fragment_demo_settings, container, false);
-                // initDemoSettings(view);
-                return view;
-            case 1:
-                view = inflater.inflate(R.layout.fragment_split, container, false);
-                initSplitPage(view);
-                // initDemoSettings(view);
-                return view;
-            default:
-                view = inflater.inflate(R.layout.fragment_demo_list, container, false);
-                initDemoList(view);
-                return view;
-        }
+        View view = inflater.inflate(R.layout.fragment_split, container, false);
+
+        super.init(view, R.id.fragment_split_framelayout);
+
+        initSplitFragment(view);
+
+        return view;
+
     }
 
     /**
      * Initialization of the SPLIT Fragment
      */
-    private void initSplitPage(final View view) {
+    private void initSplitFragment(final View view) {
         // Who bought? --section
         split_who_array = new ArrayList<>();
         split_who_array.add("Gogosica"); // TODO: 9/21/2017 to be removed and replaced with the list which will be got from user's config
         split_who_array.add("Gogosel"); //// TODO: 9/21/2017 the same as above
-        split_who_et = (AutoCompleteTextView) view.findViewById(R.id.split_WhoBought_ETxt);
+        split_who_et = (AutoCompleteTextView) view.findViewById(R.id.split_WhoPaid_ETxt);
         ArrayAdapter<String> who_array_adapter = new ArrayAdapter<>(view.getContext(), android.R.layout.select_dialog_singlechoice, split_who_array); //Create Array Adapter
         split_who_et.setThreshold(0); //Set the number of characters the user must type before the drop down list is shown
         split_who_et.setAdapter(who_array_adapter); //Set the adapter
@@ -247,119 +214,5 @@ public class MainFragment extends Fragment {
         String[] splitted_spchrem = new String[splitted.length];
         for (int i = 0; i < splitted.length; i++)
             splitted_spchrem[i] = splitted[i].replaceAll("[-+.^:,]", "");
-    }
-
-    /**
-     * Init demo settings
-     */
-    private void initDemoSettings(View view) {
-
-        final MainActivity mainActivity = (MainActivity) getActivity();
-        final SwitchCompat switchColored = (SwitchCompat) view.findViewById(R.id.fragment_demo_switch_colored);
-        final SwitchCompat switchFiveItems = (SwitchCompat) view.findViewById(R.id.fragment_demo_switch_five_items);
-        final SwitchCompat showHideBottomNavigation = (SwitchCompat) view.findViewById(R.id.fragment_demo_show_hide);
-        final SwitchCompat showSelectedBackground = (SwitchCompat) view.findViewById(R.id.fragment_demo_selected_background);
-        final SwitchCompat switchForceTitleHide = (SwitchCompat) view.findViewById(R.id.fragment_demo_force_title_hide);
-        final SwitchCompat switchTranslucentNavigation = (SwitchCompat) view.findViewById(R.id.fragment_demo_translucent_navigation);
-
-        switchColored.setChecked(mainActivity.isBottomNavigationColored());
-        switchFiveItems.setChecked(mainActivity.getBottomNavigationNbItems() == 5);
-        switchTranslucentNavigation.setChecked(getActivity()
-                .getSharedPreferences("shared", Context.MODE_PRIVATE)
-                .getBoolean("translucentNavigation", false));
-        switchTranslucentNavigation.setVisibility(
-                Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP ? View.VISIBLE : View.GONE);
-
-        switchTranslucentNavigation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                getActivity()
-                        .getSharedPreferences("shared", Context.MODE_PRIVATE)
-                        .edit()
-                        .putBoolean("translucentNavigation", isChecked)
-                        .apply();
-                mainActivity.reload();
-            }
-        });
-        switchColored.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // mainActivity.updateBottomNavigationColor(isChecked);
-            }
-        });
-        switchFiveItems.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // mainActivity.updateBottomNavigationItems(isChecked);
-            }
-        });
-        showHideBottomNavigation.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // mainActivity.showOrHideBottomNavigation(isChecked);
-            }
-        });
-        showSelectedBackground.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // mainActivity.updateSelectedBackgroundVisibility(isChecked);
-            }
-        });
-        switchForceTitleHide.setOnCheckedChangeListener(new CompoundButton.OnCheckedChangeListener() {
-            @Override
-            public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
-                // mainActivity.setForceTitleHide(isChecked);
-            }
-        });
-    }
-
-    /**
-     * Init the fragment
-     */
-    private void initDemoList(View view) {
-
-        fragmentContainer = (FrameLayout) view.findViewById(R.id.fragment_container);
-        recyclerView = (RecyclerView) view.findViewById(R.id.fragment_demo_recycler_view);
-        recyclerView.setHasFixedSize(true);
-        layoutManager = new LinearLayoutManager(getActivity());
-        recyclerView.setLayoutManager(layoutManager);
-
-        ArrayList<String> itemsData = new ArrayList<>();
-        for (int i = 0; i < 50; i++) {
-            itemsData.add("Fragment " + getArguments().getInt("index", -1) + " / Item " + i);
-        }
-
-        MainAdapter adapter = new MainAdapter(itemsData);
-        recyclerView.setAdapter(adapter);
-    }
-
-    /**
-     * Refresh
-     */
-    public void refresh() {
-        if (getArguments().getInt("index", 0) > 0 && recyclerView != null) {
-            recyclerView.smoothScrollToPosition(0);
-        }
-    }
-
-    /**
-     * Called when a fragment will be displayed
-     */
-    public void willBeDisplayed() {
-        // Do what you want here, for example animate the content
-        if (fragmentContainer != null) {
-            Animation fadeIn = AnimationUtils.loadAnimation(getActivity(), R.anim.botnavi_fade_in);
-            fragmentContainer.startAnimation(fadeIn);
-        }
-    }
-
-    /**
-     * Called when a fragment will be hidden
-     */
-    public void willBeHidden() {
-        if (fragmentContainer != null) {
-            Animation fadeOut = AnimationUtils.loadAnimation(getActivity(), R.anim.botnavi_fade_out);
-            fragmentContainer.startAnimation(fadeOut);
-        }
     }
 }

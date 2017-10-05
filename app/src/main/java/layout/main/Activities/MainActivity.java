@@ -1,29 +1,22 @@
-package nyc.walletb;
+package layout.main.Activities;
 
-import android.animation.Animator;
 import android.content.Intent;
-
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.view.animation.LinearOutSlowInInterpolator;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.app.AppCompatDelegate;
 import android.util.Log;
-import android.view.View;
-import android.view.animation.OvershootInterpolator;
 
 import com.aurelhubert.ahbottomnavigation.AHBottomNavigation;
 import com.aurelhubert.ahbottomnavigation.AHBottomNavigationItem;
 import com.aurelhubert.ahbottomnavigation.AHBottomNavigationViewPager;
 import com.aurelhubert.ahbottomnavigation.notification.AHNotification;
-
 import com.facebook.stetho.Stetho;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.tasks.Task;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GooglePlayServicesAvailabilityIOException;
@@ -38,7 +31,6 @@ import com.google.api.services.sheets.v4.model.*;
 import android.Manifest;
 import android.accounts.AccountManager;
 import android.app.Dialog;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.ConnectivityManager;
@@ -53,6 +45,9 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import layout.main.Fragments.FragmentComplement;
+import layout.main.Adapters.MainViewPagerAdapter;
+import nyc.walletb.R;
 import pub.devrel.easypermissions.AfterPermissionGranted;
 import pub.devrel.easypermissions.EasyPermissions;
 
@@ -60,185 +55,119 @@ import pub.devrel.easypermissions.EasyPermissions;
  * The UI was inherited from https://github.com/aurelhubert/ahbottomnavigation
  */
 public class MainActivity extends AppCompatActivity implements EasyPermissions.PermissionCallbacks {
-    final String TAG = getClass().getName();
+    private final String TAG = getClass().getName();
 
     // Google Spreadsheet
-    GoogleAccountCredential spreadsheet_credential;
-    ProgressDialog spreadsheet_progressBar;
+    private static GoogleAccountCredential spreadsheet_credential;
+    //ProgressDialog spreadsheet_progressBar;
     static final int spreadsheet_REQUEST_ACCOUNT_PICKER = 1000;
     static final int spreadsheet_REQUEST_AUTHORIZATION = 1001;
     static final int spreadsheet_REQUEST_GOOGLE_PLAY_SERVICES = 1002;
     static final int spreadsheet_REQUEST_PERMISSION_GET_ACCOUNTS = 1003;
-    static final String spreadsheet_PREF_ACCOUNT_NAME = "accountName";
+    static final String spreadsheet_PREF_ACCOUNT_NAME = "GoogleAccountEmail"; // This name will appear in Chrome go to Remote Target > nyc.walletb > inspect >> Local Storage > MainActivity
     // com.google.api.client.googleapis.json.GoogleJsonResponseException: 403 Forbidden  is caused by  SheetsScopes.SPREADSHEETS_READONLY
     private static final String[] spreadsheet_SCOPES = {SheetsScopes.SPREADSHEETS};
     private static final String spreadsheet_ID = "1jwMOrr9fcjIkw3DM-yTBhw8UbvICE6P9UQ_bFI7KWpQ";
     private static final String spreadsheet_sheetID = "Sheet1";
 
-    private MainFragment currentFragment;
+    private FragmentComplement currentFragment;
     private MainViewPagerAdapter adapter;
-    //private AHBottomNavigationAdapter navigationAdapter;
-    private ArrayList<AHBottomNavigationItem> bottomNavigationItems = new ArrayList<>();
-    //private boolean useMenuResource = true;
-    //private int[] tabColors;
-    private Handler handler = new Handler();
 
-    // UI
+    /* UI - bottom navigation bar */
     private AHBottomNavigationViewPager viewPager;
     private AHBottomNavigation bottomNavigation;
-    private FloatingActionButton floatingActionButton;
+    private ArrayList<AHBottomNavigationItem> bottomNavigationItems = new ArrayList<>();
+    private Handler BottomNavigation_Notifier_handler = new Handler();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        /*
+         * For debug (NON-ROOTED phones) I used  http://facebook.github.io/stetho/
+         * 1) in build.gradle add compile 'com.facebook.stetho:stetho:1.5.0'
+         * 2) in the onCreate() add Stetho.initializeWithDefaults(this);
+         * 3) in Chrome, from PC, go to the chrome://inspect/
+         * 4) in Chrome go to Remote Target > nyc.walletb > inspect >> Local Storage > MainActivity
+         */
         Stetho.initializeWithDefaults(this);
 
         setTheme(R.style.AppTheme);
         setContentView(R.layout.activity_home);
         initUI();
+
+        /* Check the internet connection directly from the Activity */
+        /*
+        new CheckNetworkConnection(this, new CheckNetworkConnection.OnConnectionCallback() {
+            @Override
+            public void onConnectionSuccess() {
+
+            }
+
+            @Override
+            public void onConnectionFail(String msg) {
+                Log.d(TAG, msg);
+            }
+        }).execute();
+        */
+
+        /* Initiate the connection with Google Spreadsheet */
+        //spreadsheet_progressBar = new ProgressDialog(getBaseContext());
+        //spreadsheet_progressBar.setMessage("Calling Google Sheets API ...");
+        // Initialize credentials and service object.
+        spreadsheet_credential = GoogleAccountCredential.usingOAuth2(
+                getApplicationContext(), Arrays.asList(spreadsheet_SCOPES))
+                .setBackOff(new ExponentialBackOff());
+        getResultsFromGoogleSheetsApi();
+
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        handler.removeCallbacksAndMessages(null);
+        BottomNavigation_Notifier_handler.removeCallbacksAndMessages(null);
     }
 
     /**
-     * Init UI
+     * Init UI with the Bottom Navigation Bar
      */
     private void initUI() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.LOLLIPOP) {
             AppCompatDelegate.setCompatVectorFromResourcesEnabled(true);
         }
-
         bottomNavigation = (AHBottomNavigation) findViewById(R.id.bottom_navigation);
         viewPager = (AHBottomNavigationViewPager) findViewById(R.id.view_pager);
-        floatingActionButton = (FloatingActionButton) findViewById(R.id.floating_action_button);
 
         // bottomNavigation.setNotification("1", 3);
-        bottomNavigationItems.add(new AHBottomNavigationItem(R.string.tab_1, R.drawable.ic_apps_black_24dp, R.color.color_tab_1));
-        bottomNavigationItems.add(new AHBottomNavigationItem(R.string.tab_2, R.drawable.icon_bill, R.color.color_tab_2));
-        bottomNavigationItems.add(new AHBottomNavigationItem(R.string.tab_3, R.drawable.ic_maps_local_restaurant, R.color.color_tab_3));
-        bottomNavigationItems.add(new AHBottomNavigationItem(R.string.tab_4, R.drawable.ic_maps_local_bar, R.color.color_tab_4));
-        bottomNavigationItems.add(new AHBottomNavigationItem(R.string.tab_5, R.drawable.ic_maps_place, R.color.color_tab_5));
+        bottomNavigationItems.add(new AHBottomNavigationItem(R.string.tab_1, R.drawable.ic_settings_white_24dp, R.color.color_tab_1));
+        bottomNavigationItems.add(new AHBottomNavigationItem(R.string.tab_2, R.drawable.ic_monetization_on_white_24dp, R.color.color_tab_2));
+        bottomNavigationItems.add(new AHBottomNavigationItem(R.string.tab_3, R.drawable.ic_home_white_24dp, R.color.color_tab_3));
+        bottomNavigationItems.add(new AHBottomNavigationItem(R.string.tab_4, R.drawable.ic_remove_circle_outline_white_24dp, R.color.color_tab_4));
+        bottomNavigationItems.add(new AHBottomNavigationItem(R.string.tab_5, R.drawable.ic_remove_circle_outline_white_24dp, R.color.color_tab_5));
+
         bottomNavigation.addItems(bottomNavigationItems);
-
-        bottomNavigation.manageFloatingActionButtonBehavior(floatingActionButton);
         bottomNavigation.setTranslucentNavigationEnabled(true);
-
         bottomNavigation.setColored(true);
-
         bottomNavigation.restoreBottomNavigation(true);
-
         bottomNavigation.setSelectedBackgroundVisible(true);
-
         bottomNavigation.setOnTabSelectedListener(new AHBottomNavigation.OnTabSelectedListener() {
             @Override
             public boolean onTabSelected(int position, boolean wasSelected) {
-
                 if (currentFragment == null) {
-                    currentFragment = adapter.getCurrentFragment();
+                    currentFragment = (FragmentComplement) adapter.getCurrentFragment();
                 }
-
-                if (wasSelected) {
-                    currentFragment.refresh();
-                    return true;
-                }
-
                 if (currentFragment != null) {
-                    currentFragment.willBeHidden();
+                    currentFragment.willBeHidden(getBaseContext());
                 }
-
                 viewPager.setCurrentItem(position, false);
-
                 if (currentFragment == null) {
                     return true;
                 }
-
-                currentFragment = adapter.getCurrentFragment();
-                currentFragment.willBeDisplayed();
-
+                currentFragment = (FragmentComplement) adapter.getCurrentFragment();
+                currentFragment.willBeDisplayed(getBaseContext());
                 if (position == 1) {
                     bottomNavigation.setNotification("", 1);
-
-                    floatingActionButton.setOnClickListener(new View.OnClickListener() {
-                        @Override
-                        public void onClick(View v) {
-
-                        }
-                    });
-
-                    floatingActionButton.setVisibility(View.VISIBLE);
-                    floatingActionButton.setImageResource(android.R.drawable.ic_menu_camera);
-                    floatingActionButton.setAlpha(0f);
-                    floatingActionButton.setScaleX(0f);
-                    floatingActionButton.setScaleY(0f);
-                    floatingActionButton.animate()
-                            .alpha(1)
-                            .scaleX(1)
-                            .scaleY(1)
-                            .setDuration(300)
-                            .setInterpolator(new OvershootInterpolator())
-                            .setListener(new Animator.AnimatorListener() {
-                                @Override
-                                public void onAnimationStart(Animator animation) {
-
-                                }
-
-                                @Override
-                                public void onAnimationEnd(Animator animation) {
-                                    floatingActionButton.animate()
-                                            .setInterpolator(new LinearOutSlowInInterpolator())
-                                            .start();
-                                }
-
-                                @Override
-                                public void onAnimationCancel(Animator animation) {
-
-                                }
-
-                                @Override
-                                public void onAnimationRepeat(Animator animation) {
-
-                                }
-                            })
-                            .start();
-
-                } else {
-                    if (floatingActionButton.getVisibility() == View.VISIBLE) {
-                        floatingActionButton.animate()
-                                .alpha(0)
-                                .scaleX(0)
-                                .scaleY(0)
-                                .setDuration(300)
-                                .setInterpolator(new LinearOutSlowInInterpolator())
-                                .setListener(new Animator.AnimatorListener() {
-                                    @Override
-                                    public void onAnimationStart(Animator animation) {
-
-                                    }
-
-                                    @Override
-                                    public void onAnimationEnd(Animator animation) {
-                                        floatingActionButton.setVisibility(View.GONE);
-                                    }
-
-                                    @Override
-                                    public void onAnimationCancel(Animator animation) {
-                                        floatingActionButton.setVisibility(View.GONE);
-                                    }
-
-                                    @Override
-                                    public void onAnimationRepeat(Animator animation) {
-
-                                    }
-                                })
-                                .start();
-                    }
                 }
-
                 return true;
             }
         });
@@ -247,9 +176,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         adapter = new MainViewPagerAdapter(getSupportFragmentManager());
         viewPager.setAdapter(adapter);
 
-        currentFragment = adapter.getCurrentFragment();
-
-        handler.postDelayed(new Runnable() {
+        BottomNavigation_Notifier_handler.postDelayed(new Runnable() {
             @Override
             public void run() {
                 // Setting custom colors for notification
@@ -259,43 +186,9 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                         .setTextColor(ContextCompat.getColor(MainActivity.this, R.color.color_notification_text))
                         .build();
                 bottomNavigation.setNotification(notification, 1);
-                Snackbar.make(bottomNavigation, "Snackbar with bottom navigation",
-                        Snackbar.LENGTH_SHORT).show();
-
+                //Snackbar.make(bottomNavigation, "Snackbar with bottom navigation", Snackbar.LENGTH_SHORT).show();
             }
         }, 2000);
-
-        //bottomNavigation.setDefaultBackgroundResource(R.drawable.bottom_navigation_background);
-
-        spreadsheet_progressBar = new ProgressDialog(this);
-        spreadsheet_progressBar.setMessage("Calling Google Sheets API ...");
-        // Initialize credentials and service object.
-        spreadsheet_credential = GoogleAccountCredential.usingOAuth2(
-                getApplicationContext(), Arrays.asList(spreadsheet_SCOPES))
-                .setBackOff(new ExponentialBackOff());
-        //getResultsFromApi();
-    }
-
-    /**
-     * Return if the bottom navigation is colored
-     */
-    public boolean isBottomNavigationColored() {
-        return bottomNavigation.isColored();
-    }
-
-    /**
-     * Reload activity
-     */
-    public void reload() {
-        startActivity(new Intent(this, MainActivity.class));
-        finish();
-    }
-
-    /**
-     * Return the number of items in the bottom navigation
-     */
-    public int getBottomNavigationNbItems() {
-        return bottomNavigation.getItemsCount();
     }
 
 
@@ -309,24 +202,40 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
     }
 
     /**
+     * Respond to requests for permissions at runtime for API 23 and above.
+     *
+     * @param requestCode  The request code passed in
+     *                     requestPermissions(android.app.Activity, String, int, String[])
+     * @param permissions  The requested permissions. Never null.
+     * @param grantResults The grant results for the corresponding permissions
+     *                     which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
+     */
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        Log.d(TAG, "onRequestPermissionsResult");
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
+    }
+
+    /**
      * Attempt to call the API, after verifying that all the preconditions are
      * satisfied. The preconditions are: Google Play Services installed, an
      * account was selected and the device currently has online access. If any
      * of the preconditions are not satisfied, the app will prompt the user as
      * appropriate.
      */
-    private void getResultsFromApi() {
+    public void getResultsFromGoogleSheetsApi() {
         if (!isGooglePlayServicesAvailable()) {
-            Log.d(TAG, "getResultsFromApi | acquireGooglePlayServices");
+            Log.d(TAG, "getResultsFromGoogleSheetsApi | acquireGooglePlayServices");
             acquireGooglePlayServices();
         } else if (spreadsheet_credential.getSelectedAccountName() == null) {
             chooseAccount();
-            Log.d(TAG, "getResultsFromApi | chooseAccount");
+            Log.d(TAG, "getResultsFromGoogleSheetsApi | chooseAccount");
         } else if (!isDeviceOnline()) {
             Toast.makeText(this, "No network connection available.", Toast.LENGTH_LONG).show();
-            Log.e(TAG, "getResultsFromApi | No network connection available.");
+            Log.e(TAG, "getResultsFromGoogleSheetsApi | No network connection available.");
         } else {
-            Log.d(TAG, "getResultsFromApi | MakeRequestTask with the chosen credential");
+            Log.d(TAG, "getResultsFromGoogleSheetsApi | MakeRequestTask with the chosen credential");
             new MakeRequestTask(spreadsheet_credential).execute();
         }
     }
@@ -346,9 +255,9 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         if (EasyPermissions.hasPermissions(this, Manifest.permission.GET_ACCOUNTS)) {
             String accountName = getPreferences(Context.MODE_PRIVATE).getString(spreadsheet_PREF_ACCOUNT_NAME, null);
             if (accountName != null) {
-                Log.d(TAG, "chooseAccount | getResultsFromApi");
+                Log.d(TAG, "chooseAccount | getResultsFromGoogleSheetsApi");
                 spreadsheet_credential.setSelectedAccountName(accountName);
-                getResultsFromApi();
+                getResultsFromGoogleSheetsApi();
             } else {
                 Log.d(TAG, "chooseAccount | Start a dialog from which the user can choose an account");
                 // Start a dialog from which the user can choose an account
@@ -384,46 +293,30 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                     Toast.makeText(this, "This app requires Google Play Services. Please install " +
                             "Google Play Services on your device and relaunch this app.", Toast.LENGTH_LONG).show();
                 } else {
-                    Log.d(TAG, "onActivityResult | spreadsheet_REQUEST_GOOGLE_PLAY_SERVICES | getResultsFromApi()");
-                    getResultsFromApi();
+                    Log.d(TAG, "onActivityResult | spreadsheet_REQUEST_GOOGLE_PLAY_SERVICES | getResultsFromGoogleSheetsApi()");
+                    getResultsFromGoogleSheetsApi();
                 }
                 break;
             case spreadsheet_REQUEST_ACCOUNT_PICKER:
                 if (resultCode == RESULT_OK && data != null && data.getExtras() != null) {
                     String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
                     if (accountName != null) {
-                        Log.d(TAG, "onActivityResult" + "spreadsheet_REQUEST_ACCOUNT_PICKER | getResultsFromApi()");
+                        Log.d(TAG, "onActivityResult" + "spreadsheet_REQUEST_ACCOUNT_PICKER | getResultsFromGoogleSheetsApi()");
                         SharedPreferences settings = getPreferences(Context.MODE_PRIVATE);
                         SharedPreferences.Editor editor = settings.edit();
                         editor.putString(spreadsheet_PREF_ACCOUNT_NAME, accountName).apply();
                         spreadsheet_credential.setSelectedAccountName(accountName);
-                        getResultsFromApi();
+                        getResultsFromGoogleSheetsApi();
                     }
                 }
                 break;
             case spreadsheet_REQUEST_AUTHORIZATION:
                 if (resultCode == RESULT_OK) {
-                    Log.d(TAG, "onActivityResult" + "spreadsheet_REQUEST_AUTHORIZATION | getResultsFromApi()");
-                    getResultsFromApi();
+                    Log.d(TAG, "onActivityResult" + "spreadsheet_REQUEST_AUTHORIZATION | getResultsFromGoogleSheetsApi()");
+                    getResultsFromGoogleSheetsApi();
                 }
                 break;
         }
-    }
-
-    /**
-     * Respond to requests for permissions at runtime for API 23 and above.
-     *
-     * @param requestCode  The request code passed in
-     *                     requestPermissions(android.app.Activity, String, int, String[])
-     * @param permissions  The requested permissions. Never null.
-     * @param grantResults The grant results for the corresponding permissions
-     *                     which is either PERMISSION_GRANTED or PERMISSION_DENIED. Never null.
-     */
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        Log.d(TAG, "onRequestPermissionsResult");
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        EasyPermissions.onRequestPermissionsResult(requestCode, permissions, grantResults, this);
     }
 
     /**
@@ -592,12 +485,12 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         @Override
         protected void onPreExecute() {
             Log.d(TAG, "onPreExecute");
-            spreadsheet_progressBar.show();
+            //spreadsheet_progressBar.show();
         }
 
         @Override
         protected void onPostExecute(List<String> output) {
-            spreadsheet_progressBar.hide();
+            //spreadsheet_progressBar.hide();
             if (output == null || output.size() == 0) {
                 Log.e(TAG, "onPostExecute | No results returned.");
                 Toast.makeText(getBaseContext(), "No results returned.", Toast.LENGTH_LONG).show();
@@ -617,7 +510,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
 
         @Override
         protected void onCancelled() {
-            spreadsheet_progressBar.hide();
+            //spreadsheet_progressBar.hide();
             if (mLastError != null) {
                 if (mLastError instanceof GooglePlayServicesAvailabilityIOException) {
                     Log.d(TAG, "onCancelled | showGooglePlayServicesAvailabilityErrorDialog()");
@@ -634,5 +527,9 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
                 Toast.makeText(getBaseContext(), "Request cancelled.", Toast.LENGTH_LONG).show();
             }
         }
+    }
+
+    public static GoogleAccountCredential getSpreadsheet_credential() {
+        return spreadsheet_credential;
     }
 }

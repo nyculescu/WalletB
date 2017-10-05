@@ -1,4 +1,4 @@
-package nyc.walletb;
+package layout.main.Activities;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -25,9 +25,11 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
+import nyc.walletb.R;
+
 /**
  * https://github.com/tesseract-ocr/tessdata/blob/3.04.00/ron.traineddata
- * */
+ */
 
 public class OCRActivity extends Activity {
     private static final String TAG = "OCRActivity.java";
@@ -47,14 +49,14 @@ public class OCRActivity extends Activity {
     protected String _path;
     protected boolean _taken;
 
-    protected static final String PHOTO_TAKEN = "photo_taken";
+    public static final String PHOTO_TAKEN = "photo_taken";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_ocr);
 
-        String[] paths = new String[] { DATA_PATH, DATA_PATH + "tessdata/" };
+        String[] paths = new String[]{DATA_PATH, DATA_PATH + "tessdata/"};
 
         for (String path : paths) {
             File dir = new File(path);
@@ -225,13 +227,13 @@ public class OCRActivity extends Activity {
 
         Log.v(TAG, "OCRED TEXT: " + recognizedText);
 
-        if ( lang.equalsIgnoreCase("eng") ) {
+        if (lang.equalsIgnoreCase("eng")) {
             recognizedText = recognizedText.replaceAll("[^a-zA-Z0-9]+", " ");
         }
 
         recognizedText = recognizedText.trim();
 
-        if ( recognizedText.length() != 0 ) {
+        if (recognizedText.length() != 0) {
             _field.setText(_field.getText().toString().length() == 0 ? recognizedText : _field.getText() + " " + recognizedText);
             _field.setSelection(_field.getText().toString().length());
         }
