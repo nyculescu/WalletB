@@ -14,8 +14,11 @@ import com.aurelhubert.ahbottomnavigation.AHBottomNavigationItem;
 import com.aurelhubert.ahbottomnavigation.AHBottomNavigationViewPager;
 import com.aurelhubert.ahbottomnavigation.notification.AHNotification;
 import com.facebook.stetho.Stetho;
+import com.google.android.gms.auth.api.Auth;
+import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
 import com.google.android.gms.common.ConnectionResult;
 import com.google.android.gms.common.GoogleApiAvailability;
+import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.tasks.Task;
 import com.google.api.client.extensions.android.http.AndroidHttp;
 import com.google.api.client.googleapis.extensions.android.gms.auth.GoogleAccountCredential;
@@ -118,8 +121,7 @@ public class MainActivity extends AppCompatActivity implements EasyPermissions.P
         spreadsheet_credential = GoogleAccountCredential.usingOAuth2(
                 getApplicationContext(), Arrays.asList(spreadsheet_SCOPES))
                 .setBackOff(new ExponentialBackOff());
-        getResultsFromGoogleSheetsApi();
-
+        //getResultsFromGoogleSheetsApi();
     }
 
     @Override

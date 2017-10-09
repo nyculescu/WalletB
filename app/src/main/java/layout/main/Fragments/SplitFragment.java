@@ -37,6 +37,8 @@ import nyc.walletb.SplitActivity_Template;
  *
  */
 public class SplitFragment extends FragmentComplement {
+    private final String TAG = getClass().getName();
+
     // UI - Split fragment
     String[] split_autocomplete_fromwhere = {"Auchan", "Carrefour", "Profi", "Lidl", "Auchan Sud", "Auchan Nord", "Auchan Iulius Mall"};
     AutoCompleteTextView split_who_et;
